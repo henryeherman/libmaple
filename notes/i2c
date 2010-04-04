@@ -149,4 +149,10 @@ possible interface, which blocks horrendously:
     i2c_slave_set_rx_callback(port, *function)
     i2c_slave_set_tx_callback(port, *function)
 
+each i2c port has an error and an event interrupt 
+
+
+the stm32 is in slave mode by default; it enters master only when executing
+a request
+
 

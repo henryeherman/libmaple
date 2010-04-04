@@ -32,7 +32,6 @@
  */
 
 #include "libmaple.h"
-#include "stm32f10x_rcc.h"
 #include "i2c.h"
 #include "gpio.h"
 #include "nvic.h"

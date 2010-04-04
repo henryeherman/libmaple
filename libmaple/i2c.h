@@ -56,9 +56,8 @@ extern "C"{
 #define I2C_ACK_ADDRESS_10BIT ((uint16)0xC000)
 
 // ((uint32)0x40000000) = PERIPH_BASE = APB1PERIPH_BASE
-// ALREADY DEFINED IN STM*_MAP.H
-//#define I2C1_BASE             (((uint32)0x40000000) + 0x5400)
-//#define I2C2_BASE             (((uint32)0x40000000) + 0x5800)
+#define I2C1_BASE             (((uint32)0x40000000) + 0x5400)
+#define I2C2_BASE             (((uint32)0x40000000) + 0x5800)
 
 // I2C interrupt class definition --------------------------------------------
 #define I2C_IT_BUF                      ((uint16)0x0400) // TODO: or 0x0600?
@@ -126,7 +125,7 @@ extern "C"{
 #define I2C_SR1_BTF        ((uint16)0x0004) // Byte transfer finished
 #define I2C_SR1_ADDR       ((uint16)0x0002) // Address sent (master)
                                             // or address matched (slave)
-#define I2C_FLAG_SB        ((uint16)0x0001) // Start bit (master)
+#define I2C_SR1_SB        ((uint16)0x0001) // Start bit (master)
 // SR2 register flags 
 #define I2C_SR2_DUALF      ((uint16)0x0080) // Dual flag (slave)
 #define I2C_SR2_SMBHOST    ((uint16)0x0040) // SMBus host header (slave)
