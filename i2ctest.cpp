@@ -15,8 +15,7 @@
 #define I2C_MASTER 2
 i2c_port *port;
 uint8 color = 4;
-uint8 byte_count = 0;
-
+uint8 byte_count = 3;
 
 int ledPin = 13;
 int toggle = 1;
@@ -42,7 +41,8 @@ void setup() {
     // - setup peripheral input clock: 4MHz for fast mode (TODO?)
     rcc_enable_clk_gpiob(); /* Enable GPIOB clock */
     rcc_enable_clk_i2c1(); /* Enable I2C1 clock */
-    port->CR2 |= (port->CR2 & 0xFFC0) | 8; // set clock to 8MHz
+    rcc_reset_i2c1();
+    port->CR2 |= (port->CR2 & 0xFFC0) | 0x24; // set clock to 36MHz
 
     // - configure interupts
     nvic_enable_interrupt(NVIC_INT_I2C1_EV);
@@ -70,22 +70,24 @@ void setup() {
 
 void loop() {
     // - software sets START high, which toggles M/SL to master mode
-    port->CR1 |= I2C_CR1_START; 
-    
-    //Usb.println("hello world!");
+    toggle = 1;
     digitalWrite(ledPin, toggle);
-    toggle ^= 1;
+
+    port->CR1 |= I2C_CR1_START; 
     delay(1000);
 }
 
 void I2C1_EV_IRQHandler(void) {
     uint16 SR1 = port->SR1;
     uint16 SR2 = port->SR2;
+
+    toggle = 0;
+    digitalWrite(ledPin, toggle);
     
     if(SR1 & I2C_SR1_SB) {
         // - when START actually happens, SB is set and interrupt happens; hardware
         //   waits until address is written to DR
-        port->DR = 45; // ADDR of slave device (led thing #45)
+        port->DR = 0x4; // ADDR of slave device (led thing #45)
         byte_count = 1;
     } else if((SR1 & I2C_SR1_ADDR) && (SR2 & I2C_SR2_TRA)) {
         // - address shifts out and an interrupt is thrown with ADDR high; if LSB of

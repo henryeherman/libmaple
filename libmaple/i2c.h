@@ -25,7 +25,6 @@
 
 /**
  *  @brief 
->>>>>>> i2c: Basic peripheral bringup and successful blocking master:libmaple/i2c.h
  */
 
 #ifndef _I2C_H_

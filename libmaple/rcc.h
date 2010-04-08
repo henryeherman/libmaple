@@ -43,7 +43,7 @@
 #define RCC_BDCR               (RCC_BASE + 0x20)
 #define RCC_CSR                (RCC_BASE + 0x24)
 #define RCC_AHBSTR             (RCC_BASE + 0x28)
-#define RCC_CFGR2              (RCC_BASE + 0x2C))
+#define RCC_CFGR2              (RCC_BASE + 0x2C)
 
 #define HSEON                  BIT(16)
 #define HSERDY                 *(volatile uint32*)(BITBAND_PERI(RCC_CR + 2, 0))
