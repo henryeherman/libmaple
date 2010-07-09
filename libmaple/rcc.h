@@ -81,6 +81,10 @@
 #define RCC_APB2RSTR_IOARST      BIT(2)
 #define RCC_APB2RSTR_AFIORST     BIT(0)
 
+#define RCC_APB1RSTR_I2C1RST     BIT(21)
+#define RCC_APB1RSTR_I2C2RST     BIT(22)
+
+
 /* APB2 peripheral clock enable bits  */
 #define RCC_APB2ENR_USART1EN   BIT(14)
 #define RCC_APB2ENR_SPI1EN     BIT(12)
@@ -94,6 +98,15 @@
 #define RCC_APB2ENR_IOAEN      BIT(2)
 #define RCC_APB2ENR_AFIOEN     BIT(0)
 
+/* APB1 reset bits  */
+#define RCC_APB1RSTR_TIM2RST     BIT(0)
+#define RCC_APB1RSTR_TIM3RST     BIT(1)
+#define RCC_APB1RSTR_TIM4RST     BIT(2)
+#define RCC_APB1RSTR_USART2RST   BIT(17)
+#define RCC_APB1RSTR_USART3RST   BIT(18)
+#define RCC_APB1RSTR_I2C1RST     BIT(21)
+#define RCC_APB1RSTR_I2C2RST     BIT(22)
+
 /* APB1 peripheral clock enable bits  */
 #define RCC_APB1ENR_TIM2EN     BIT(0)
 #define RCC_APB1ENR_TIM3EN     BIT(1)
@@ -101,6 +114,10 @@
 #define RCC_APB1ENR_USART2EN   BIT(17)
 #define RCC_APB1ENR_USART3EN   BIT(18)
 #define RCC_APB1ENR_SPI2EN     BIT(14)
+#define RCC_APB1ENR_I2C1EN     BIT(21)
+#define RCC_APB1ENR_I2C2EN     BIT(22)
+#define RCC_APB1ENR_I2C1EN     BIT(21)
+#define RCC_APB1ENR_I2C2EN     BIT(22)
 
 #define rcc_enable_clk_spi1()     __set_bits(RCC_APB2ENR, RCC_APB2ENR_SPI1EN)
 #define rcc_enable_clk_spi2()     __set_bits(RCC_APB1ENR, RCC_APB1ENR_SPI2EN)
@@ -120,12 +137,23 @@
 #define rcc_enable_clk_usart2()   __set_bits(RCC_APB1ENR, RCC_APB1ENR_USART2EN)
 #define rcc_enable_clk_usart3()   __set_bits(RCC_APB1ENR, RCC_APB1ENR_USART3EN)
 
+#define rcc_enable_clk_i2c1()     __set_bits(RCC_APB1ENR, RCC_APB1ENR_I2C1EN)
+#define rcc_enable_clk_i2c2()     __set_bits(RCC_APB1ENR, RCC_APB1ENR_I2C2EN)
+
 #define rcc_enable_clk_adc1()     __set_bits(RCC_APB2ENR, RCC_APB2ENR_ADC1EN)
 
 #define rcc_reset_adc1()          { __set_bits(RCC_APB2RSTR, RCC_APB2RSTR_ADC1RST);   \
                                     __clear_bits(RCC_APB2RSTR, RCC_APB2RSTR_ADC1RST); \
                                   }
 
+#define rcc_reset_i2c1()          { __set_bits(RCC_APB1RSTR, RCC_APB1RSTR_I2C1RST);   \
+                                    __clear_bits(RCC_APB1RSTR, RCC_APB1RSTR_I2C1RST); \
+                                  }
+
+
+#define rcc_reset_i2c2()          { __set_bits(RCC_APB1RSTR, RCC_APB1RSTR_I2C2RST);   \
+                                    __clear_bits(RCC_APB1RSTR, RCC_APB1RSTR_I2C2RST); \
+                                  }
 
 void rcc_init(void);
 void rcc_set_adc_prescaler(uint32 divider);

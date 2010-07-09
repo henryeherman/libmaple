@@ -31,6 +31,10 @@
 
 #define NVIC_INT_USBHP      19
 #define NVIC_INT_USBLP      20
+#define NVIC_INT_I2C1_EV    31
+#define NVIC_INT_I2C1_ER    32
+#define NVIC_INT_I2C2_EV    33
+#define NVIC_INT_I2C2_ER    34
 #define NVIC_EXTI1_OFFSET   (NVIC_ISER0 + 0x07)
 #define NVIC_EXTI9_5_OFFSET (NVIC_ISER0 + 0x17)
 
