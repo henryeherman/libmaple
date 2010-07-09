@@ -1,3 +1,8 @@
+i2c TODO ----------------------------------------------------------------------
+
+- switch a bunch of uint32s to uint8s
+- rethink implementation
+
 Quick TODO --------------------------------------------------------------------
 
 - write language unit test

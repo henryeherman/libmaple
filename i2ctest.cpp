@@ -5,7 +5,7 @@
 #include "nvic.h"
 #include "wiring.h"
 #include "wiring_math.h"
-#include "HardwareUsb.h"
+#include "HardwareSerial.h"
 #include "usb.h"
 #include "usart.h"
 #include "i2c.h"
@@ -13,108 +13,74 @@
 
 #define I2C_SLAVE  1
 #define I2C_MASTER 2
-i2c_port *port;
-uint8 color = 4;
-uint8 byte_count = 3;
+
+//HardwareUsb usb;
 
 int ledPin = 13;
 int toggle = 1;
-//HardwareUsb Usb;
+uint8 data[7]; 
 
 void setup() {
     pinMode(ledPin, OUTPUT);
+    data[0] = data[1] = data[2] = data[3] = data[4] = data[5] = data[6] = 100; 
+    i2c_init(I2C_PORT1, 10000);
+    Serial2.begin(9600);
 
-    port = (i2c_port*)I2C1_BASE;
-
-    port->CR1 |= I2C_CR1_SWRST;  // reset the peripheral
-    port->CR1 &= ~I2C_CR1_SWRST;  
-    
-    // disable the hardware to configure
-    port->CR1 &= (~ I2C_CR1_PE); 
-
-    // - setup pins
-    /* Configure I2C1 pins: SCL and SDA */
-    // on the maple, I2C1 SCL is Pin 5 and I2C1 SDA is Pin 9
-    gpio_set_mode(GPIOB_BASE, 6, GPIO_MODE_AF_OUTPUT_OD); // NOT maple pin #s
-    gpio_set_mode(GPIOB_BASE, 7, GPIO_MODE_AF_OUTPUT_OD);
-
-    // - setup peripheral input clock: 4MHz for fast mode (TODO?)
-    rcc_enable_clk_gpiob(); /* Enable GPIOB clock */
-    rcc_enable_clk_i2c1(); /* Enable I2C1 clock */
-    rcc_reset_i2c1();
-    port->CR2 |= (port->CR2 & 0xFFC0) | 0x24; // set clock to 36MHz
-
-    // - configure interupts
-    nvic_enable_interrupt(NVIC_INT_I2C1_EV);
-    nvic_enable_interrupt(NVIC_INT_I2C1_ER);
-
-    // - configure clock control registers
-    /* Set speed value for standard mode */
-    port->CCR = 0x28; // 100kHz
-    port->CCR &= (~ I2C_CCR_FS); // standard mode
-    
-    // - configure rise time register
-    /* Set Maximum Rise Time for standard mode */
-    port->TRISE = 9; // for 100kHz standard
-
-    // - configure I2C_CR1, I2C_CR2 to enable the peripheral
-    port->CR1 &= (~ (I2C_CR1_PEC | I2C_CR1_SMBUS | I2C_CR1_SMBTYPE | I2C_CR1_NOSTRETCH )); 
-    port->CR2 |= (I2C_CR2_ITEVTEN | I2C_CR2_ITBUFEN);
-
-    // - set ACK flag low: won't be a slave until addr is set
-    port->CR1 &= (~ I2C_CR1_ACK);
-    
-    // Re-enable port after configuration
-    port->CR1 |= I2C_CR1_PE; 
 }
 
 void loop() {
-    // - software sets START high, which toggles M/SL to master mode
-    toggle = 1;
-    digitalWrite(ledPin, toggle);
-
-    port->CR1 |= I2C_CR1_START; 
-    delay(1000);
-}
-
-void I2C1_EV_IRQHandler(void) {
-    uint16 SR1 = port->SR1;
-    uint16 SR2 = port->SR2;
-
-    toggle = 0;
-    digitalWrite(ledPin, toggle);
+    uint8 n = 0; n++;// TODO
+    digitalWrite(ledPin, 1);
+    delay(500);
+    digitalWrite(ledPin, 0);
+    delay(500);
     
-    if(SR1 & I2C_SR1_SB) {
-        // - when START actually happens, SB is set and interrupt happens; hardware
-        //   waits until address is written to DR
-        port->DR = 0x4; // ADDR of slave device (led thing #45)
-        byte_count = 1;
-    } else if((SR1 & I2C_SR1_ADDR) && (SR2 & I2C_SR2_TRA)) {
-        // - address shifts out and an interrupt is thrown with ADDR high; if LSB of
-        //   address was low, in transmitter mode. TRA reflects this
-        // - software writes to the first byte to DR and clears ADDR
-        port->DR = color;
-        port->SR1 &= ~ I2C_SR1_ADDR;
-        byte_count--;
-    } else if((SR1 & I2C_SR1_TXE) && (SR1 & I2C_SR1_BTF)) {
-        // - first byte shifts out and when there's an ACK an interrupt is thrown
-        //   with TxE high; if no new byte was written to DR since the previous
-        //   transmission BTF goes high
-        // - software writes next byte to DR and clears BTF, or sets STOP bit to end
-        //   data transmission, or sets START to begin next part of combined session
-        // - after STOP is set, hardware goes back to slave mode
-        if(byte_count) {
-            port->DR = color;
-            port->SR1 &= ~I2C_SR1_BTF;
-            byte_count--;
-        } else {
-            port->DR = color;
-            port->SR1 &= ~I2C_SR1_BTF;
-            port->SR1 |= I2C_SR1_STOPF;
-        }
+    //toggle ^= 1;
+    //digitalWrite(ledPin, toggle);
 
-    }
+    // reset i2c
+    //i2c_init(I2C_PORT1, 10000);
+    // go
+    //i2c_send1(4,5);
+    //i2c_slave_set_addr(I2C_PORT1, 4);
+    //i2c_send1(4,5);
+    //n = i2c_isbusy(I2C_PORT1); Serial2.print("pre1busy = "); Serial2.println((uint32)n);
+    data[0] = data[1] = data[2] = data[3] = data[4] = data[5] = data[6] = 64; 
+    i2c_master_write(I2C_PORT1, 4, data, 1);
+    //n = i2c_read1(4);
+    
+    /*
+    data[0] = data[1] = data[2] = data[3] = data[4] = data[5] = data[6] = 100; 
+    i2c_master_read(I2C_PORT1, 4, data, 6);
+    delay(100);
+    i2c_isbusy(I2C_PORT1);
+    Serial2.println("----------");
+
+    Serial2.print("data[0] = "); Serial2.println((uint32)data[0],DEC);
+    Serial2.print("data[1] = "); Serial2.println((uint32)data[1],DEC);
+    Serial2.print("data[2] = "); Serial2.println((uint32)data[2],DEC);
+    Serial2.print("data[3] = "); Serial2.println((uint32)data[3],DEC);
+    Serial2.print("data[4] = "); Serial2.println((uint32)data[4],DEC);
+    Serial2.print("data[5] = "); Serial2.println((uint32)data[5],DEC);
+    //Serial2.print("postread = "); Serial2.println((uint32)i2c_getlen(I2C_PORT1));
+    */ 
+    //n = i2c_isbusy(I2C_PORT1); Serial2.print("post2busy = "); Serial2.println((uint32)n);
+    //Serial2.print("len = "); Serial2.println(i2c_getlen(I2C_PORT1));
+
+    //i2c_start();
+    /*
+    Serial2.print("Value: b");
+    Serial2.print(1 && (n & 0x80));
+    Serial2.print(1 && (n & 0x40));
+    Serial2.print(1 && (n & 0x20));
+    Serial2.print(1 && (n & 0x10));
+    Serial2.print(1 && (n & 0x08));
+    Serial2.print(1 && (n & 0x04));
+    Serial2.print(1 && (n & 0x02));
+    Serial2.println(1 && (n & 0x01));
+    */
 }
+
 
 int main(void) {
     init();

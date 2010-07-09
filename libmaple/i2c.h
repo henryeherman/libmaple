@@ -37,15 +37,10 @@
 extern "C"{
 #endif
 
-#ifndef I2C_BUFFER_LENGTH
-#define I2C_BUFFER_LENGTH 64
-#endif
+#define I2C_TIMEOUT     100 // in milliseconds
 
-#define I2C_READY 0
-#define I2C_MRX   1
-#define I2C_MTX   2
-#define I2C_SRX   3
-#define I2C_STX   4
+#define I2C_PORT1   1
+#define I2C_PORT2   2
 
 // Slave address for Leaflabs Maple Board. TODO: choose a reasonable value?
 #define I2C_DEFAULT_SLAVE_ADDRESS ((uint16)42)
@@ -58,28 +53,6 @@ extern "C"{
 #define I2C1_BASE             (((uint32)0x40000000) + 0x5400)
 #define I2C2_BASE             (((uint32)0x40000000) + 0x5800)
 
-// I2C interrupt class definition --------------------------------------------
-#define I2C_IT_BUF                      ((uint16)0x0400) // TODO: or 0x0600?
-#define I2C_IT_EVT                      ((uint16)0x0200)
-#define I2C_IT_ERR                      ((uint16)0x0100)
-
-// Full interrupt definitions (see pg652/1003) -------------------------------
-#define I2C_IT_SMBALERT ((uint32)0x01008000) // SMBus Alert
-#define I2C_IT_TIMEOUT  ((uint32)0x01004000) // Timeout/TLow error
-#define I2C_IT_PECERR   ((uint32)0x01001000) // PEC error
-#define I2C_IT_OVR      ((uint32)0x01000800) // Overrun/Underrun
-#define I2C_IT_AF       ((uint32)0x01000400) // Acknowledge failure
-#define I2C_IT_ARLO     ((uint32)0x01000200) // Arbitration loss (master)
-#define I2C_IT_BERR     ((uint32)0x01000100) // Bus error
-#define I2C_IT_TXE      ((uint32)0x06000080) // Transmit buffer empty
-#define I2C_IT_RXNE     ((uint32)0x06000040) // Receive buffer not empty
-#define I2C_IT_STOPF    ((uint32)0x02000010) // Stop received (slave)
-#define I2C_IT_ADD10    ((uint32)0x02000008) // 10bit header sent (master)
-#define I2C_IT_BTF      ((uint32)0x02000004) // Data byte transfer finished
-#define I2C_IT_ADDR     ((uint32)0x02000002) // Address sent (master)
-                                          // or Address matched (slave)
-#define I2C_IT_SB       ((uint32)0x02000001) // Start bit sent (master)
-
 // Full status flag definitions ---------------------------------------------
 // CR2 register flags
 #define I2C_CR2_LAST       ((uint16)0x0800) // DMA last transfer
@@ -87,7 +60,7 @@ extern "C"{
 #define I2C_CR2_ITBUFEN    ((uint16)0x0200) // Buffer interrupt enable
 #define I2C_CR2_ITEVTEN    ((uint16)0x0100) // Event interrupt enable
 #define I2C_CR2_ITERREN    ((uint16)0x0080) // Error interrupt enable
-// TODO: values as a mask?
+// values as a mask?
 //#define I2C_CR2_FREQ       ((uint16)0x003F) // Frequency (6bit, 2-36 allowed,
                                             // Mhz)
 // CR1 register flags
@@ -138,7 +111,7 @@ extern "C"{
 #define I2C_CCR_FS         ((uint16)0x8000) // Master mode speed (1=fast)
 #define I2C_CCR_DUTY       ((uint16)0x4000) // Fast mode duty cycle (1=16/9)
 
-// Mapping of I2C1 or I2C2 registers into a struct
+// Mapping of I2C1 or I2C2 registers into a struct --------------------------
 typedef struct i2c_port { 
     volatile uint16 CR1;      // Control register 1
     uint16 RESERVED0;
@@ -159,34 +132,34 @@ typedef struct i2c_port {
     volatile uint16 TRISE;    // TRISE register
 } i2c_port;
 
+
 // Function definitions -----------------------------------------------------
-void i2c_init(uint8 i2c_num, uint16 freq);
-void i2c_set_mode(uint8 i2c_num, uint8 mode);
-void i2c_disable(uint8 i2c_num);
+// FOR TESTING
+void i2c_send1(uint32 addr, uint32 data);
+uint8 i2c_read1(uint32 addr);
+uint32 i2c_getlen(uint8 i2c_num);
+uint8 i2c_isbusy(uint8 i2c_num);
 
-// these will go to master mode if not already
-uint8 i2c_master_read(uint8 port, uint8 addr, uint8 *data, uint8 length);
-uint8 i2c_master_write(uint8 port, uint8 addr, uint8* data, 
-                       uint8 length, uint8 wait);    // need length?
+void i2c_init(uint32 i2c_num, uint32 freq);
+void i2c_disable(uint32 i2c_num);
 
-// these will go to slave mode if not already
-void i2c_slave_set_addr(uint8 port, uint8 addr);
-void i2c_slave_set_rx_callback(uint8 port, void (*function)(uint8*, int));
-void i2c_slave_set_tx_callback(uint8 port, void (*function)(void));
+void i2c_master_read(uint8 i2c_num, uint32 addr, uint8 *data, uint32 len);
+void i2c_master_write(uint8 i2c_num, uint32 addr, uint8 *data, uint32 len);
 
+void i2c_slave_set_addr(uint32 port, uint32 addr);
+void i2c_slave_set_begin_callback(uint32 port, void (*function)(void));
+void i2c_slave_set_rx_callback(uint32 port, void (*function)(uint8*));
+void i2c_slave_set_tx_callback(uint32 port, uint8 (*function)(void));
+void i2c_slave_set_end_callback(uint32 port, void (*function)(void));
 
-/*
-void i2c_setAddress(uint8 i2c_num, uint8 address);
-uint8 i2c_readFrom(uint8 i2c_num, uint8 address, uint8* data, uint8 length);
-uint8 i2c_writeTo(uint8 i2c_num, uint8 address, uint8* data, uint8 length, uint8 wait);
-uint8 i2c_transmit(uint8 i2c_num, uint8* data, uint8 length);
-// TODO: what should the int parameter actually be?
-void i2c_attachSlaveRxEvent(uint8 i2c_num, void (*)(uint8*, int) );
-void i2c_attachSlaveTxEvent(uint8 i2c_num, void (*)(void) );
-void i2c_reply(unit8 i2c_num, uint8 ack);
-void i2c_stop(unit8 i2c_num);
-void i2c_releaseBus(unit8 i2c_num);
-*/
+void default_slave_callback(void);
+void default_rx_callback(uint8 data);
+uint8 default_tx_callback(void);
+
+void I2C1_EV_IRQHandler(void);
+void I2C1_ER_IRQHandler(void);
+void I2C2_EV_IRQHandler(void);
+void I2C2_ER_IRQHandler(void);
 
 #ifdef __cplusplus
 } // extern "C"

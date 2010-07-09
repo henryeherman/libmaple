@@ -56,6 +56,7 @@ void nvic_enable_interrupt(uint32 n) {
         return;
     }
 
+    // our chip only has 60 interrupts, not 68
     if (n < 32) {
         REG_SET_BIT(NVIC_ISER0, n);
     } else {

@@ -22,15 +22,17 @@ i2c_init(port, freq)
 i2c_disable(port)
 
 // blocking/polling
-i2c_master_read(port, slave_addr, *data, len)  // wrapper around writeread
-i2c_master_write(port, slave_addr, *data, len) // wrapper around writeread
-i2c_master_writeread(port, slave_addr, *wdata, wlen, *rdata, rlen)
+i2c_master_read(port, slave_addr, *data, len)  // wrapper around writeread; returns length
+i2c_master_write(port, slave_addr, *data, len) // wrapper around writeread; returns length
+i2c_master_writeread(port, slave_addr, *wdata, wlen, *rdata, rlen) // returns length
 
 // callbacks/interrupts
 i2c_slave_set_addr(port, addr) // enables callbacks etc if they aren't already;
                                // set ACK high
+i2c_slave_set_begin_callback(port, *function)  // initializes?
 i2c_slave_set_rx_callback(port, *function) // takes a byte?
 i2c_slave_set_tx_callback(port, *function) // gives a byte?
+i2c_slave_set_end_callback(port, *function)  // initializes?
 
 How to init:
  - setup pins
@@ -100,6 +102,17 @@ How to slave rx (master write):
    until the BTF flag is reset
  - after the STOP is sent, hardware sets STOPF, throws an event if ITEVFEN is
    high, and waits for a read of SR1 and write CR1
+
+Maple Implementation ----------------------------------------------------------
+
+port state vars:
+ uint32 state // 0 = ready, 1 = busy
+ uint32 target
+ uint32 *data    // by the byte! chars!
+ uint32 length
+ uint32 offset (where we're at)
+ uint32 *slave_rx
+ uint32 *slave_tx
 
 i2c General Reference ---------------------------------------------------------
 
