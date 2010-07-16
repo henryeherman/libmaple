@@ -35,17 +35,39 @@
 USBSerial :: USBSerial(void) {
 }
 
-void USBSerial::write(uint8 ch) {
+void USBSerial::begin(int32 mode) {
+  this->mode = mode;
+  setupUsb();
+}
+
+void USBSerial::write_blocking(uint8 ch) {
   usbSendBytes(&ch, 1);
 }
 
-void USBSerial::write(const char *str) {
+void USBSerial::write_blocking(const char *str) {
    uint32 len = strlen(str);
  
    usbSendBytes((uint8*)str, len);
 }
 
-void USBSerial::write(void *buf, uint32 size) {
+void USBSerial::write_blocking(void *buf, uint32 size) {
+   if (!buf) {
+      return;
+   }
+   usbSendBytes((uint8*)buf, size);
+}
+
+void USBSerial::write_nonblocking(uint8 ch) {
+  usbSendBytes(&ch, 1);
+}
+
+void USBSerial::write_nonblocking(const char *str) {
+   uint32 len = strlen(str);
+ 
+   usbSendBytes((uint8*)str, len);
+}
+
+void USBSerial::write_nonblocking(void *buf, uint32 size) {
    if (!buf) {
       return;
    }
@@ -54,6 +76,10 @@ void USBSerial::write(void *buf, uint32 size) {
 
 uint32 USBSerial::available(void) {
    return usbBytesAvailable();
+}
+
+uint16 USBSerial::pending(void) {
+   return usbGetCountTx();
 }
 
 uint32 USBSerial::read(void *buf, uint32 len) {

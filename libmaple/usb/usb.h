@@ -59,6 +59,8 @@ typedef enum
 
   void usbSendHello(void);
 
+  uint16 usbGetCountTx(void);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

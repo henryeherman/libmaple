@@ -32,10 +32,27 @@
 
 #include "Print.h"
 
+#define BLOCKING       0
+#define NONBLOCKING    -1
+
 class USBSerial : public Print {
+
+   private:
+      int32  mode;
+      void   writeBlocking(uint8);
+      void   writeBlocking(const char *str);
+      void   writeBlocking(void *, uint32);
+      void   writeNonBlocking(uint8);
+      void   writeNonBlocking(const char *str);
+      void   writeNonBlocking(void *, uint32);
+      
    public:
       USBSerial(void);
 
+      void   begin(uint32);
+      void   end(uint32);
+
+      uint16 pending(void);
       uint32 available(void);
 
       uint32 read(void *buf, uint32 len);
