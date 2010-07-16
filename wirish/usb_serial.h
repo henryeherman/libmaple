@@ -49,8 +49,8 @@ class USBSerial : public Print {
    public:
       USBSerial(void);
 
-      void   begin(uint32);
-      void   end(uint32);
+      void   begin(int32);
+      void   end();
 
       uint16 pending(void);
       uint32 available(void);

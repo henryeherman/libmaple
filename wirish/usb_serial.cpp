@@ -32,42 +32,42 @@
 #include "wirish.h"
 #include "usb.h"
 
-USBSerial :: USBSerial(void) {
+USBSerial::USBSerial(void) {
 }
 
 void USBSerial::begin(int32 mode) {
   this->mode = mode;
-  setupUsb();
+  setupUSB();
 }
 
-void USBSerial::write_blocking(uint8 ch) {
+void USBSerial::writeBlocking(uint8 ch) {
   usbSendBytes(&ch, 1);
 }
 
-void USBSerial::write_blocking(const char *str) {
+void USBSerial::writeBlocking(const char *str) {
    uint32 len = strlen(str);
  
    usbSendBytes((uint8*)str, len);
 }
 
-void USBSerial::write_blocking(void *buf, uint32 size) {
+void USBSerial::writeBlocking(void *buf, uint32 size) {
    if (!buf) {
       return;
    }
    usbSendBytes((uint8*)buf, size);
 }
 
-void USBSerial::write_nonblocking(uint8 ch) {
+void USBSerial::writeNonBlocking(uint8 ch) {
   usbSendBytes(&ch, 1);
 }
 
-void USBSerial::write_nonblocking(const char *str) {
+void USBSerial::writeNonBlocking(const char *str) {
    uint32 len = strlen(str);
  
    usbSendBytes((uint8*)str, len);
 }
 
-void USBSerial::write_nonblocking(void *buf, uint32 size) {
+void USBSerial::writeNonBlocking(void *buf, uint32 size) {
    if (!buf) {
       return;
    }
