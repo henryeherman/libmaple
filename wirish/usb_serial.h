@@ -36,30 +36,50 @@
 
 class USBSerial {
 
-   private:
-      int32  timeout;
-      int32 writeBlocking(uint8);
-      int32 writeBlocking(const char *str);
-      int32 writeBlocking(void *, uint32);
-      int32 writeNonBlocking(uint8);
-      int32 writeNonBlocking(const char *str);
-      int32 writeNonBlocking(void *, uint32);
-      
-   public:
-      USBSerial(void);
+    private:
+        int32 timeout;
 
-      void   begin(int32);
-      void   end();
+        // Print.h functions with return values
+        int32 printNumber(unsigned long, uint8);
+        int32 printFloat(double, uint8);
 
-      uint32 pending(void);
-      uint32 available(void);
+    public:
+        USBSerial(void);
 
-      uint32 read(void *buf, uint32 len);
-      uint8  read(void);
+        void   begin(void);
+        void   begin(int32);
+        void   end();
 
-      int32  write(uint8);
-      int32  write(const char *str);
-      int32  write(void *, uint32);
+        uint8 pending(void);
+        uint32 available(void);
+
+        uint32 read(void *buf, uint32 len);
+        uint8  read(void);
+
+        int32  write(uint8);
+        int32  write(const char *str);
+        int32  write(void *, uint32);
+
+        // Print.h functions with return values
+        int32 print(char);
+        int32 print(const char[]);
+        int32 print(uint8);
+        int32 print(int);
+        int32 print(unsigned int);
+        int32 print(long);
+        int32 print(unsigned long);
+        int32 print(long, int);
+        int32 print(double);
+        int32 println(void);
+        int32 println(char);
+        int32 println(const char[]);
+        int32 println(uint8);
+        int32 println(int);
+        int32 println(unsigned int);
+        int32 println(long);
+        int32 println(unsigned long);
+        int32 println(long, int);
+        int32 println(double);
 };
 
 extern USBSerial SerialUSB;

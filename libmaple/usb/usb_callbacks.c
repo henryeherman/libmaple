@@ -43,10 +43,7 @@ uint8       line_dtr_rts = 0;
 
 void vcomDataTxCb(void) {
   /* do whatever after data has been sent to host */
-
   /* allows usbSendBytes to stop blocking */
-
-
   countTx = 0;
 }
 
@@ -113,8 +110,6 @@ void vcomDataRxCb(void) {
       }
     }
   }
-
-
 
   if (recvBufIn + newBytes < VCOM_RX_EPSIZE) {
     PMAToUserBufferCopy(&vcomBufferRx[recvBufIn],VCOM_RX_ADDR,newBytes);

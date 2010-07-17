@@ -25,46 +25,44 @@
 // Public Methods //////////////////////////////////////////////////////////////
 
 /* default implementation: may be overridden */
-int32 Print::write(const char *str)
+void Print::write(const char *str)
 {
   while (*str)
     write(*str++);
-  return 0;
 }
 
 /* default implementation: may be overridden */
-int32 Print::write(void *buffer, uint32 size)
+void Print::write(void *buffer, uint32 size)
 {
    uint8 *ch = (uint8*)buffer;
    while (size--) {
       write(*ch++);
    }
-  return 0;
 }
 
 void Print::print(uint8 b)
 {
-  return this->write(b);
+  this->write(b);
 }
 
 void Print::print(char c)
 {
-  return print((byte) c);
+  print((byte) c);
 }
 
 void Print::print(const char str[])
 {
-  return write(str);
+  write(str);
 }
 
 void Print::print(int n)
 {
-  return print((long) n);
+  print((long) n);
 }
 
 void Print::print(unsigned int n)
 {
-  return print((unsigned long) n);
+  print((unsigned long) n);
 }
 
 void Print::print(long n)
@@ -73,39 +71,39 @@ void Print::print(long n)
     print('-');
     n = -n;
   }
-  return printNumber(n, 10) + 1;
+  printNumber(n, 10);
 }
 
 void Print::print(unsigned long n)
 {
-  return printNumber(n, 10);
+  printNumber(n, 10);
 }
 
 void Print::print(long n, int base)
 {
   if (base == 0)
-    return print((char) n);
+    print((char) n);
   else if (base == 10)
-    return print(n);
+    print(n);
   else
-    return printNumber(n, base);
+    printNumber(n, base);
 }
 
 void Print::print(double n)
 {
-  return printFloat(n, 2);
+  printFloat(n, 2);
 }
 
 void Print::println(void)
 {
   print('\r');
-  return print('\n') + 1;
+  print('\n');
 }
 
 void Print::println(char c)
 {
   print(c);
-  return println() + 1;
+  println();
 }
 
 void Print::println(const char c[])

@@ -364,34 +364,39 @@ void usbWaitReset(void) {
  * */
 int16 usbSendBytes(uint8* sendBuf, uint16 len) { 
   
-  uint16 sent;
+  uint16 loaded = 0;
+  uint16 countTxSafe = countTx; // to stay interrupt-safe
 
   if (bDeviceState != CONFIGURED || (!usbGetDTR() && !usbGetRTS())) {
-    return -1; /* indicates to caller to stop trying, were not connected */
+    // Indicates to caller to stop trying, were not configured/connected
+    // The DTR and RTS lines are handled differently on major platforms, so
+    // the above logic is unreliable
+    return -1; 
   }
 
-  if (countTx >= VCOM_TX_EPSIZE) {
-    return 0; // indicates to caller that the buffer is full 
+  if (countTxSafe >= VCOM_TX_EPSIZE) {
+    // Indicates to caller that the buffer is full and nothing was sent
+    return 0; 
   }
 
- 
-  if(len > (VCOM_TX_EPSIZE - countTx)) {
-    sent = (VCOM_TX_EPSIZE - countTx);
+  // We can only put VCOM_TX_EPSIZE bytes in the buffer
+  if(len > (VCOM_TX_EPSIZE - countTxSafe)) {
+    loaded = (VCOM_TX_EPSIZE - countTxSafe);
   } else {
-    sent = len;
+    loaded = len;
   }
-    
-  if (sent) {
-    UserToPMABufferCopy(sendBuf,VCOM_TX_ADDR + countTx, sent);
-    _SetEPTxCount(VCOM_TX_ENDP, countTx+sent );
+
+  // Try to load some bytes if we can
+  if (loaded) {
+    UserToPMABufferCopy(sendBuf,VCOM_TX_ADDR + countTxSafe, loaded);
+    _SetEPTxCount(VCOM_TX_ENDP, countTxSafe+loaded);
     _SetEPTxValid(VCOM_TX_ENDP);
 
-    countTx += sent;
-
-    len     -= VCOM_TX_EPSIZE;
+    // This one instruction is UNSAFE?
+    countTx += loaded;
   }
 
-  return sent;
+  return loaded;
 }
 
 /* returns the number of available bytes are in the recv FIFO */
