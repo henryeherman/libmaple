@@ -74,6 +74,19 @@ void USBSerial::writeNonBlocking(void *buf, uint32 size) {
    usbSendBytes((uint8*)buf, size);
 }
 
+void USBSerial::write(const char *str) {
+   uint32 len = strlen(str);
+ 
+   usbSendBytes((uint8*)str, len);
+}
+
+void USBSerial::write(void *buf, uint32 size) {
+   if (!buf) {
+      return;
+   }
+   usbSendBytes((uint8*)buf, size);
+}
+
 uint32 USBSerial::available(void) {
    return usbBytesAvailable();
 }
