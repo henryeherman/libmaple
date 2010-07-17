@@ -30,21 +30,20 @@
 #ifndef _USB_SERIAL_H_
 #define _USB_SERIAL_H_
 
-#include "Print.h"
-
 #define BLOCKING       0
 #define NONBLOCKING    -1
+#define USB_DISABLED   -2
 
-class USBSerial : public Print {
+class USBSerial {
 
    private:
-      int32  mode;
-      void   writeBlocking(uint8);
-      void   writeBlocking(const char *str);
-      void   writeBlocking(void *, uint32);
-      void   writeNonBlocking(uint8);
-      void   writeNonBlocking(const char *str);
-      void   writeNonBlocking(void *, uint32);
+      int32  timeout;
+      int32 writeBlocking(uint8);
+      int32 writeBlocking(const char *str);
+      int32 writeBlocking(void *, uint32);
+      int32 writeNonBlocking(uint8);
+      int32 writeNonBlocking(const char *str);
+      int32 writeNonBlocking(void *, uint32);
       
    public:
       USBSerial(void);
@@ -52,15 +51,15 @@ class USBSerial : public Print {
       void   begin(int32);
       void   end();
 
-      uint16 pending(void);
+      uint32 pending(void);
       uint32 available(void);
 
       uint32 read(void *buf, uint32 len);
       uint8  read(void);
 
-      void   write(uint8);
-      void   write(const char *str);
-      void   write(void *, uint32);
+      int32  write(uint8);
+      int32  write(const char *str);
+      int32  write(void *, uint32);
 };
 
 extern USBSerial SerialUSB;

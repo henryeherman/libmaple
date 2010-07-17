@@ -362,7 +362,9 @@ void usbWaitReset(void) {
  * platform.
  *
  * */
-int16 usbSendBytes(uint8* sendBuf, uint16 len) { uint16 sent;
+int16 usbSendBytes(uint8* sendBuf, uint16 len) { 
+  
+  uint16 sent;
 
   if (bDeviceState != CONFIGURED || (!usbGetDTR() && !usbGetRTS())) {
     return -1; /* indicates to caller to stop trying, were not connected */

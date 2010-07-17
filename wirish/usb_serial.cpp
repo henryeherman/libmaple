@@ -33,65 +33,142 @@
 #include "usb.h"
 
 USBSerial::USBSerial(void) {
+    this->timeout = USB_DISABLED;
 }
 
 void USBSerial::begin(int32 mode) {
-  this->mode = mode;
-  setupUSB();
+    if(mode < -2) {
+        mode = -2;
+    }
+    this->timeout = mode;
+    setupUSB();
 }
 
-void USBSerial::writeBlocking(uint8 ch) {
-  usbSendBytes(&ch, 1);
+void USBSerial::end() {
+  this->timeout = USB_DISABLED;
+  //disableUSB();   //TODO: implement
 }
 
-void USBSerial::writeBlocking(const char *str) {
+int32 USBSerial::writeBlocking(uint8 ch) {
+  uint32 status = 0;
+  while(status < 1) {
+    status = usbSendBytes(&ch, 1);
+  }
+  return status;
+}
+
+int32 USBSerial::writeBlocking(const char *str) {
+  uint32 status = sent = 0;
+  uint32 len = strlen(str);
+  while(len > sent) {
+    status = usbSendBytes((uint8*)str, len);
+    if(status < 0) {
+        return status;
+    }
+    sent += status;
+  }
+  return sent;
+}
+
+int32 USBSerial::writeBlocking(void *buf, uint32 size) {
+  // buffer already check for null in write()
+  uint32 status = sent = 0;
+  while(size > sent) {
+    status = usbSendBytes((uint8*)buf, size);
+    if(status < 0) {
+        return status;
+    }
+    sent += status;
+  }
+  return sent;
+}
+
+int32 USBSerial::writeNonBlocking(uint8 ch) {
+  return usbSendBytes(&ch, 1);
+}
+
+int32 USBSerial::writeNonBlocking(const char *str) {
    uint32 len = strlen(str);
- 
-   usbSendBytes((uint8*)str, len);
+   return usbSendBytes((uint8*)str, len);
 }
 
-void USBSerial::writeBlocking(void *buf, uint32 size) {
+int32 USBSerial::writeNonBlocking(void *buf, uint32 size) {
+   // buffer already check for null in write()
+   return usbSendBytes((uint8*)buf, size);
+}
+
+int32 USBSerial::write(uint8 ch) {
+    switch(this->timeout) {
+        case USB_DISABLED:
+            return -1;
+        case NONBLOCKING:
+            return writeNonBlocking(ch);
+        case BLOCKING:
+            return writeBlocking(ch);
+        default:
+            uint32 start = millis();
+            int32 ret = 0;
+            while((millis() - start < this->timeout) && ret == 0) {
+                ret = writeNonBlocking(ch);
+            }
+            return ret;
+    }
+}
+
+int32 USBSerial::write(const char *str) {
+    switch(this->timeout) {
+        case USB_DISABLED:
+            return -1;
+        case NONBLOCKING:
+            return writeNonBlocking(str);
+        case BLOCKING:
+            return writeBlocking(str);
+        default:
+            uint32 len = strlen(str);
+            uint32 start = millis();
+            int32 ret = sent = 0;
+            while((millis() - start < this->timeout) && sent < len) {
+                ret = writeNonBlocking(str);
+                if(ret < 0) {
+                    return ret;
+                }
+                sent += ret;
+            }
+            return sent;
+    }
+
+}
+
+int32 USBSerial::write(void *buf, uint32 size) {
    if (!buf) {
       return;
    }
-   usbSendBytes((uint8*)buf, size);
-}
-
-void USBSerial::writeNonBlocking(uint8 ch) {
-  usbSendBytes(&ch, 1);
-}
-
-void USBSerial::writeNonBlocking(const char *str) {
-   uint32 len = strlen(str);
- 
-   usbSendBytes((uint8*)str, len);
-}
-
-void USBSerial::writeNonBlocking(void *buf, uint32 size) {
-   if (!buf) {
-      return;
+   switch(this->timeout) {
+       case USB_DISABLED:
+           return -1;
+       case NONBLOCKING:
+           return writeNonBlocking(buf,size);
+       case BLOCKING:
+           return writeBlocking(buf,size);
+       default:
+            uint32 start = millis();
+            int32 ret = sent = 0;
+            while((millis() - start < this->timeout) && sent < size) {
+                ret = writeNonBlocking(buf,size);
+                if(ret < 0) {
+                    return ret;
+                }
+                sent += ret;
+            }
+            return sent;
    }
-   usbSendBytes((uint8*)buf, size);
-}
-
-void USBSerial::write(const char *str) {
-   uint32 len = strlen(str);
- 
-   usbSendBytes((uint8*)str, len);
-}
-
-void USBSerial::write(void *buf, uint32 size) {
-   if (!buf) {
-      return;
-   }
-   usbSendBytes((uint8*)buf, size);
 }
 
 uint32 USBSerial::available(void) {
    return usbBytesAvailable();
 }
 
-uint16 USBSerial::pending(void) {
+uint32 USBSerial::pending(void) {
    return usbGetCountTx();
 }
 
