@@ -1,5 +1,5 @@
 
-SerialUSB
+SerialUSB Implementation
 -------------------------------------------------------------------------------
 The low-level serial USB implementation (in libmaple, written in C) is always
 non-blocking. A blocking implementation which polls with an optional timeout
@@ -11,6 +11,7 @@ flush() clears the RX and TX buffers
 available() gives # of bytes in RX buffer
 pending() gives # of bytes in TX buffer
 read() gets one byte from RX buffer (or ??? if empty)
+getRTS()/getDTR() return control line status
 write(), print(), println(), see below
 
 there is nothing preventing the implementation of setTimeout(),
@@ -24,8 +25,6 @@ NONBLOCKING (-1)
 
     returns pending (max 64) if bytes got put in the TX buffer
     returns 0 if buffer was full
-    returns -1 if connection seems to be closed or there was another error.
-
 
 BLOCKING (0) 
     print() will block INDEFINATELY waiting for an open connection to send 
@@ -33,7 +32,6 @@ BLOCKING (0)
 
     returns sent (# of bytes added to the TX buffer successfully; all but the
         last 64 or so will have been fully transmitted) 
-    returns -1 if connection was closed or there was another error.
 
 TIMEOUT (the default, with 10ms. timeout period in ms)
     print() will behave as in BLOCKING mode, except that it will timeout after
@@ -43,4 +41,25 @@ TIMEOUT (the default, with 10ms. timeout period in ms)
 
     returns sent (# of bytes added to the TX buffer successfully; all but the
         last 64 or so will have been fully transmitted) 
-    returns sent (# of bytes added 
+    returns 0 if buffer was full
+
+SerialUSB Design Decisions
+-------------------------------------------------------------------------------
+The USB port behaves differently from other serial interfaces, making a clean
+and simple "println()" implementation difficult. Data to be sent to the host is
+written into a small 64byte endpoint buffer, which the host may (or may not!)
+read from at any time. The RTS and DTR control lines /should/ indicate whether
+the host will empty out the endpoint buffer in a reasonable amount of time,
+but this is not reliable. 
+
+From the usercode side, we want the println() function to accept strings up to
+hundreds of characters long (longer than the buffer) and get them sent out as
+quickly as possible, returning to code execution as quickly as possible. At the
+same time we don't want want to generate a large buffer because this will 
+quickly eat up RAM. When the host device is not connected or not recieving
+bytes, the behavior of println can be undefined; it should return quickly and
+usercode should be able to determine if bytes were queued or not, but it isn't
+important what happens to the bytes. On the other hand, when the device /is/
+connected, we want to guarentee that bytes get sent in the appropriate order
+and none are missed.
+

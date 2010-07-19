@@ -30,56 +30,59 @@
 #ifndef _USB_SERIAL_H_
 #define _USB_SERIAL_H_
 
-#define BLOCKING       0
-#define NONBLOCKING    -1
-#define USB_DISABLED   -2
+#define USB_DISABLED   0
+#define NONBLOCKING    1
+#define BLOCKING       2
+#define TIMEOUT        3
 
 class USBSerial {
 
     private:
-        int32 timeout;
+        uint32 timeout;
+        uint8  mode;
 
         // Print.h functions with return values
-        int32 printNumber(unsigned long, uint8);
-        int32 printFloat(double, uint8);
+        uint32 printNumber(unsigned long, uint8);
+        uint32 printFloat(double, uint8);
 
     public:
         USBSerial(void);
 
-        void   begin(void);
-        void   begin(int32);
-        void   end();
+        void begin(void);
+        void begin(uint8);
+        void begin(uint8, uint32);
+        void end();
 
-        uint8 pending(void);
+        uint32 pending(void);
         uint32 available(void);
 
         uint32 read(void *buf, uint32 len);
         uint8  read(void);
 
-        int32  write(uint8);
-        int32  write(const char *str);
-        int32  write(void *, uint32);
+        uint32 write(uint8);
+        uint32 write(const char *str);
+        uint32 write(void *, uint32);
 
         // Print.h functions with return values
-        int32 print(char);
-        int32 print(const char[]);
-        int32 print(uint8);
-        int32 print(int);
-        int32 print(unsigned int);
-        int32 print(long);
-        int32 print(unsigned long);
-        int32 print(long, int);
-        int32 print(double);
-        int32 println(void);
-        int32 println(char);
-        int32 println(const char[]);
-        int32 println(uint8);
-        int32 println(int);
-        int32 println(unsigned int);
-        int32 println(long);
-        int32 println(unsigned long);
-        int32 println(long, int);
-        int32 println(double);
+        uint32 print(char);
+        uint32 print(const char[]);
+        uint32 print(uint8);
+        uint32 print(int);
+        uint32 print(unsigned int);
+        uint32 print(long);
+        uint32 print(unsigned long);
+        uint32 print(long, int);
+        uint32 print(double);
+        uint32 println(void);
+        uint32 println(char);
+        uint32 println(const char[]);
+        uint32 println(uint8);
+        uint32 println(int);
+        uint32 println(unsigned int);
+        uint32 println(long);
+        uint32 println(unsigned long);
+        uint32 println(long, int);
+        uint32 println(double);
 };
 
 extern USBSerial SerialUSB;

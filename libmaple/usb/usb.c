@@ -225,10 +225,11 @@ RESULT usbPowerOff(void) {
   return USB_SUCCESS;
 }
 
+
+// These two functions (usbEnbISR/usbDsbISR) are implementented in ST style,
+// and at least the DsbISR doesn't seem to work?
 void usbEnbISR(void) {
   NVIC_InitTypeDef NVIC_InitStructure;
-
-
   NVIC_InitStructure.NVIC_IRQChannel = USB_LP_IRQ;
   NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
@@ -362,37 +363,35 @@ void usbWaitReset(void) {
  * platform.
  *
  * */
-int16 usbSendBytes(uint8* sendBuf, uint16 len) { 
+uint16 usbSendBytes(uint8* sendBuf, uint16 len) { 
   
   uint16 loaded = 0;
-  uint16 countTxSafe = countTx; // to stay interrupt-safe
 
   if (bDeviceState != CONFIGURED || (!usbGetDTR() && !usbGetRTS())) {
     // Indicates to caller to stop trying, were not configured/connected
     // The DTR and RTS lines are handled differently on major platforms, so
     // the above logic is unreliable
-    return -1; 
+    return 0; 
   }
 
-  if (countTxSafe >= VCOM_TX_EPSIZE) {
-    // Indicates to caller that the buffer is full and nothing was sent
+  // Due to a variety of shit this is how we roll; all buffering etc is pushed
+  // upstream
+  if (countTx) { 
     return 0; 
   }
 
   // We can only put VCOM_TX_EPSIZE bytes in the buffer
-  if(len > (VCOM_TX_EPSIZE - countTxSafe)) {
-    loaded = (VCOM_TX_EPSIZE - countTxSafe);
+  if(len > (VCOM_TX_EPSIZE - countTx)) {
+    loaded = (VCOM_TX_EPSIZE - countTx);
   } else {
     loaded = len;
   }
 
   // Try to load some bytes if we can
   if (loaded) {
-    UserToPMABufferCopy(sendBuf,VCOM_TX_ADDR + countTxSafe, loaded);
-    _SetEPTxCount(VCOM_TX_ENDP, countTxSafe+loaded);
+    UserToPMABufferCopy(sendBuf,VCOM_TX_ADDR + countTx, loaded);
+    _SetEPTxCount(VCOM_TX_ENDP, countTx+loaded);
     _SetEPTxValid(VCOM_TX_ENDP);
-
-    // This one instruction is UNSAFE?
     countTx += loaded;
   }
 

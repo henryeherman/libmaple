@@ -32,30 +32,34 @@
 #include "wirish.h"
 #include "usb.h"
 
+#define DEFAULT_USB_TIMEOUT     1
+
 USBSerial::USBSerial(void) {
-    this->timeout = USB_DISABLED;
+    this->mode = USB_DISABLED;
 }
 
 void USBSerial::begin(void) {
-    begin(10);
+    begin(TIMEOUT,DEFAULT_USB_TIMEOUT);
 }
 
-void USBSerial::begin(int32 mode) {
-    if(mode < -2) {
-        mode = -2;
-    }
-    this->timeout = mode;
+void USBSerial::begin(uint8 mode) {
+    begin(mode,DEFAULT_USB_TIMEOUT);
+}
+
+void USBSerial::begin(uint8 mode, uint32 timeout) {
+    this->mode = mode;
+    this->timeout = timeout;
     setupUSB();
 }
 
 void USBSerial::end() {
-  this->timeout = USB_DISABLED;
+  this->mode = USB_DISABLED;
   //disableUSB();   //TODO: implement
 }
 
-int32 USBSerial::write(uint8 ch) {
-    int32 status = 0;
-    switch(this->timeout) {
+uint32 USBSerial::write(uint8 ch) {
+    uint32 status = 0;
+    switch(this->mode) {
         case USB_DISABLED:
             return -1;
         case NONBLOCKING:
@@ -65,84 +69,73 @@ int32 USBSerial::write(uint8 ch) {
                 status = usbSendBytes(&ch, 1);
             }
             return status;
-        default:
+        case TIMEOUT:
             uint32 start = millis();
-            while(status == 0 && ((int32)(millis() - start) < this->timeout)) {
+            while(status == 0 && (millis() - start) <= this->timeout) {
                 status = usbSendBytes(&ch, 1);
             }
             return status;
     }
+    return 0;
 }
 
-int32 USBSerial::write(const char *str) {
-    int32 status = 0;
-    int32 sent = 0;
-    int32 len = strlen(str);
-    switch(this->timeout) {
+uint32 USBSerial::write(const char *str) {
+    uint32 status = 0;
+    uint32 len = strlen(str);
+    switch(this->mode) {
         case USB_DISABLED:
             return -1;
         case NONBLOCKING:
             return usbSendBytes((uint8*)str, len);
         case BLOCKING:
-            while(len > sent) {
-                status = usbSendBytes((uint8*)str, len);
-                if(status < 0) {
-                    return status;
-                }
-                sent += status;
+            while(len > status) {
+                status += usbSendBytes((uint8*)str, len);
             }
-            return sent;
-        default:
-            int32 start = millis();
-            while(len > sent && ((int32)(millis() - start) < this->timeout)) {
-                status = usbSendBytes((uint8*)str, len);
-                if(status < 0) {
-                    return status;
-                }
-                sent += status;
+            return status;
+        case TIMEOUT:
+            uint32 start = millis();
+            while(len > status && (millis() - start) <= this->timeout) {
+                status += usbSendBytes((uint8*)str, len);
+                if(status)
+                    start = millis();
             }
-            return sent;
+            return status;
     }
+    return 0;
 }
 
-int32 USBSerial::write(void *buf, uint32 size) {
+uint32 USBSerial::write(void *buf, uint32 size) {
     if (!buf) {
         return 0;
     }
-    uint32 sent = 0;
     uint32 status = 0;
-    switch(this->timeout) {
+    switch(this->mode) {
         case USB_DISABLED:
             return -1;
         case NONBLOCKING:
             return usbSendBytes((uint8*)buf, size);
         case BLOCKING:
-            while(size > sent) {
-                status = usbSendBytes((uint8*)buf, size);
-                if(status < 0) {
-                    return status;
-                }
-                sent += status;
+            while(size > status) {
+                status += usbSendBytes((uint8*)buf, size);
             }
-            return sent;
-        default:
+            return status;
+        case TIMEOUT:
             uint32 start = millis();
-            while(size > sent && ((int32)(millis() - start) < this->timeout)) {
-                status = usbSendBytes((uint8*)buf, size);
-                if(status < 0) {
-                    return status;
-                }
-                sent += status;
+            while(size > status && (millis() - start) <= this->timeout) {
+                status += usbSendBytes((uint8*)buf, size);
+                if(status)
+                    start = millis();
             }
-            return sent;
+            return status;
     }
+    return 0;
 }
 
 uint32 USBSerial::available(void) {
    return usbBytesAvailable();
 }
 
-uint8 USBSerial::pending(void) {
+uint32 USBSerial::pending(void) {
    return usbGetCountTx();
 }
 
@@ -150,7 +143,6 @@ uint32 USBSerial::read(void *buf, uint32 len) {
    if (!buf) {
       return 0;
    }
-
    return usbReceiveBytes((uint8*)buf, len);
 }
 
@@ -162,41 +154,36 @@ uint8 USBSerial::read(void) {
 
 // Print.h functions with return values...
 
-int32 USBSerial::print(uint8 b) {
+uint32 USBSerial::print(uint8 b) {
   return write(b);
 }
 
-int32 USBSerial::print(char c) {
-  return print((byte) c);
+uint32 USBSerial::print(char c) {
+  return write((byte) c);
 }
 
-int32 USBSerial::print(const char str[]) {
+uint32 USBSerial::print(const char str[]) {
   return write(str);
 }
 
-int32 USBSerial::print(int n) {
+uint32 USBSerial::print(int n) {
   return print((long) n);
 }
 
-int32 USBSerial::print(unsigned int n) {
+uint32 USBSerial::print(unsigned int n) {
   return print((unsigned long) n);
 }
 
-int32 USBSerial::print(long n) {
-  int32 ret = 0;
-  if (n < 0) {
-    ret += print('-');
-    n = -n;
-  }
-  ret += printNumber(n, 10);
-  return ret;
+uint32 USBSerial::print(long n) {
+  uint32 status = print('-');
+  return status + printNumber(n, 10);
 }
 
-int32 USBSerial::print(unsigned long n) {
+uint32 USBSerial::print(unsigned long n) {
   return printNumber(n, 10);
 }
 
-int32 USBSerial::print(long n, int base) {
+uint32 USBSerial::print(long n, int base) {
   if (base == 0)
     return print((char) n);
   else if (base == 10)
@@ -205,60 +192,65 @@ int32 USBSerial::print(long n, int base) {
     return printNumber(n, base);
 }
 
-int32 USBSerial::print(double n) {
+uint32 USBSerial::print(double n) {
   return printFloat(n, 2);
 }
 
-int32 USBSerial::println(void) {
-  return print("\r\n");
+uint32 USBSerial::println(void) {
+  return write("\r\n");
 }
 
-int32 USBSerial::println(char c) {
-  if(print(c)) {
-    return println() + 1;
-  } else {
-    return -1;
-  }
+uint32 USBSerial::println(char c) {
+  uint32 status = print(c);
+  return status + println();
 }
 
-int32 USBSerial::println(const char c[]) {
-  return print(c) + println();
+uint32 USBSerial::println(const char c[]) {
+  uint32 status = print(c);
+  return status + println();
 }
 
-int32 USBSerial::println(uint8 b) {
-  return print(b) + println();
+uint32 USBSerial::println(uint8 b) {
+  uint32 status = print(b);
+  return status + println();
 }
 
-int32 USBSerial::println(int n) {
-  return print(n) + println();
+uint32 USBSerial::println(int n) {
+  uint32 status = print(n);
+  return status + println();
 }
 
-int32 USBSerial::println(unsigned int n) {
-  return print(n) + println();
+uint32 USBSerial::println(unsigned int n) {
+  uint32 status = print(n);
+  return status + println();
 }
 
-int32 USBSerial::println(long n) {
-  return print(n) + println();
+uint32 USBSerial::println(long n) {
+  uint32 status = print(n);
+  return status + println();
 }
 
-int32 USBSerial::println(unsigned long n) {
-  return print(n) + println();
+uint32 USBSerial::println(unsigned long n) {
+  uint32 status = print(n);
+  return status + println();
 }
 
-int32 USBSerial::println(long n, int base) {
-  return print(n, base) + println();
+uint32 USBSerial::println(long n, int base) {
+  uint32 status = print(n,base);
+  return status + println();
 }
 
-int32 USBSerial::println(double n) {
-  return print(n) + println();
+uint32 USBSerial::println(double n) {
+  uint32 status = print(n);
+  return status + status;
 }
 
 // Private Methods /////////////////////////////////////////////////////////////
 
-int32 USBSerial::printNumber(unsigned long n, uint8 base) {
+uint32 USBSerial::printNumber(unsigned long n, uint8 base) {
   unsigned char buf[8 * sizeof(long)]; // Assumes 8-bit chars.
   unsigned long i = 0;
-  int32 ret = 0;
+  int32 status = 0;
 
   if (n == 0) {
     return print('0');
@@ -270,17 +262,17 @@ int32 USBSerial::printNumber(unsigned long n, uint8 base) {
   }
 
   for (; i > 0; i--) {
-      ret += print((char) (buf[i - 1] < 10 ?  '0' + buf[i - 1] : 'A' + buf[i - 1] - 10));
+      status += print((char) (buf[i - 1] < 10 ?  '0' + buf[i - 1] : 'A' + buf[i - 1] - 10));
   }
-  return ret;
+  return status;
 }
 
-int32 USBSerial::printFloat(double number, uint8 digits) {
-  int32 ret = 0;
+uint32 USBSerial::printFloat(double number, uint8 digits) {
+  uint32 status = 0;
   // Handle negative numbers
   if (number < 0.0)
   {
-     ret += print('-');
+     status += print('-');
      number = -number;
   }
 
@@ -294,21 +286,21 @@ int32 USBSerial::printFloat(double number, uint8 digits) {
   // Extract the integer part of the number and print it
   unsigned long int_part = (unsigned long)number;
   double remainder = number - (double)int_part;
-  ret += print(int_part);
+  status += print(int_part);
 
   // Print the decimal point, but only if there are digits beyond
   if (digits > 0)
-    ret += print(".");
+    status += print(".");
 
   // Extract digits from the remainder one at a time
   while (digits-- > 0)
   {
     remainder *= 10.0;
     int toPrint = int(remainder);
-    ret += print(toPrint);
+    status += print(toPrint);
     remainder -= toPrint;
   }
-  return ret;
+  return status;
 }
 
 USBSerial SerialUSB;
