@@ -89,15 +89,18 @@ uint32 USBSerial::write(const char *str) {
             return usbSendBytes((uint8*)str, len);
         case BLOCKING:
             while(len > status) {
-                status += usbSendBytes((uint8*)str, len);
+                status += usbSendBytes((uint8*)str+status, len-status);
             }
             return status;
         case TIMEOUT:
             uint32 start = millis();
+            uint32 oldstatus = 0;
             while(len > status && (millis() - start) <= this->timeout) {
-                status += usbSendBytes((uint8*)str, len);
-                if(status)
+                status += usbSendBytes((uint8*)str+status, len-status);
+                if(status != oldstatus) {
                     start = millis();
+                    oldstatus = status;
+                }
             }
             return status;
     }
@@ -121,10 +124,13 @@ uint32 USBSerial::write(void *buf, uint32 size) {
             return status;
         case TIMEOUT:
             uint32 start = millis();
+            uint32 oldstatus = 0;
             while(size > status && (millis() - start) <= this->timeout) {
-                status += usbSendBytes((uint8*)buf, size);
-                if(status)
+                status += usbSendBytes((uint8*)buf+status, size-status);
+                if(status != oldstatus) {
                     start = millis();
+                    oldstatus = status;
+                }
             }
             return status;
     }
