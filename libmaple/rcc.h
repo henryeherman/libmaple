@@ -116,8 +116,6 @@
 #define RCC_APB1ENR_SPI2EN     BIT(14)
 #define RCC_APB1ENR_I2C1EN     BIT(21)
 #define RCC_APB1ENR_I2C2EN     BIT(22)
-#define RCC_APB1ENR_I2C1EN     BIT(21)
-#define RCC_APB1ENR_I2C2EN     BIT(22)
 
 #define rcc_enable_clk_spi1()     __set_bits(RCC_APB2ENR, RCC_APB2ENR_SPI1EN)
 #define rcc_enable_clk_spi2()     __set_bits(RCC_APB1ENR, RCC_APB1ENR_SPI2EN)
