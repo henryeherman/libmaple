@@ -30,9 +30,6 @@
 #ifndef _I2C_H_
 #define _I2C_H_
 
-#define I2C1_BASE       0x40005400
-#define I2C2_BASE       0x40005800
-
 #ifdef __cplusplus
 extern "C"{
 #endif
@@ -42,7 +39,7 @@ extern "C"{
 #define I2C_PORT1   1
 #define I2C_PORT2   2
 
-// Slave address for Leaflabs Maple Board. TODO: choose a reasonable value?
+// Slave address for Leaflabs Maple Board.
 #define I2C_DEFAULT_SLAVE_ADDRESS ((uint16)42)
 
 // I2C acknowledged address defines
@@ -134,11 +131,6 @@ typedef struct i2c_port {
 
 
 // Function definitions -----------------------------------------------------
-// FOR TESTING
-void i2c_send1(uint32 addr, uint32 data);
-uint8 i2c_read1(uint32 addr);
-uint32 i2c_getlen(uint8 i2c_num);
-uint8 i2c_isbusy(uint8 i2c_num);
 
 void i2c_init(uint32 i2c_num, uint32 freq);
 void i2c_disable(uint32 i2c_num);
@@ -147,19 +139,21 @@ void i2c_master_read(uint8 i2c_num, uint32 addr, uint8 *data, uint32 len);
 void i2c_master_write(uint8 i2c_num, uint32 addr, uint8 *data, uint32 len);
 
 void i2c_slave_set_addr(uint32 port, uint32 addr);
-void i2c_slave_set_begin_callback(uint32 port, void (*function)(void));
-void i2c_slave_set_rx_callback(uint32 port, void (*function)(uint8*));
-void i2c_slave_set_tx_callback(uint32 port, uint8 (*function)(void));
-void i2c_slave_set_end_callback(uint32 port, void (*function)(void));
-
-void default_slave_callback(void);
-void default_rx_callback(uint8 data);
-uint8 default_tx_callback(void);
+void i2c_slave_set_begin_handler(uint32 port, voidFuncPtr handler);
+void i2c_slave_set_rx_handler(uint32 port, void (*handler)(uint8*));
+void i2c_slave_set_tx_handler(uint32 port, uint8 (*handler)(void));
+void i2c_slave_set_end_handler(uint32 port, voidFuncPtr handler);
 
 void I2C1_EV_IRQHandler(void);
 void I2C1_ER_IRQHandler(void);
 void I2C2_EV_IRQHandler(void);
 void I2C2_ER_IRQHandler(void);
+
+// FOR TESTING
+void i2c_send1(uint32 addr, uint32 data);
+uint8 i2c_read1(uint32 addr);
+uint32 i2c_getlen(uint8 i2c_num);
+uint8 i2c_isbusy(uint8 i2c_num);
 
 #ifdef __cplusplus
 } // extern "C"

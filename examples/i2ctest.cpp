@@ -1,13 +1,5 @@
 
-#include "libmaple.h"
-#include "libmaple_types.h"
-#include "rcc.h"
-#include "nvic.h"
-#include "wiring.h"
-#include "wiring_math.h"
-#include "HardwareSerial.h"
-#include "usb.h"
-#include "usart.h"
+#include "wirish.h"
 #include "i2c.h"
 
 
@@ -92,10 +84,3 @@ int main(void) {
     return 0;
 }
 
-/* Required for C++ hackery */
-/* TODO: This really shouldn't go here... move it later
- * */
-extern "C" void __cxa_pure_virtual(void) {
-    while(1)
-        ;
-}

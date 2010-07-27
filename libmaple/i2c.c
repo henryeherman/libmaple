@@ -62,10 +62,10 @@ typedef struct i2c_state {
     uint8 *data;                            // by the byte! chars!
     uint32 len;                             // how much data?
     uint32 index;                           // where we're at
-    void (*slave_begin_callback) (void);
-    void (*slave_rx_callback) (uint8);
-    uint8 (*slave_tx_callback) (void);
-    void (*slave_end_callback) (void);
+    void (*slave_begin_handler) (void);
+    void (*slave_rx_handler) (uint8);
+    uint8 (*slave_tx_handler) (void);
+    void (*slave_end_handler) (void);
 } i2c_state;
 
 static i2c_state i2c1_state;
@@ -73,8 +73,6 @@ static i2c_state i2c2_state;
 
 /* -----------------------------------------------------------------------*/
 void i2c_init(uint32 i2c_num, uint32 freq) {
-    ASSERT(IS_VALID_I2C_NUM(i2c_num));
-
     i2c_port *port;
     i2c_state *state;
     //freq = 100000;  // TODO: this
@@ -102,7 +100,7 @@ void i2c_init(uint32 i2c_num, uint32 freq) {
             nvic_enable_interrupt(NVIC_INT_I2C1_ER);
             break;
         case I2C_PORT2: 
-            // not yet
+            // TODO: copy above
         default:   // should never get here
             ASSERT(0);
     }
@@ -152,10 +150,10 @@ void i2c_init(uint32 i2c_num, uint32 freq) {
     state->data = 0;                             // by the byte! chars! TODO: bad, null?
     state->len = 0;                           // how much data?
     state->index = 0;                           // where we're at
-    state->slave_begin_callback = &default_slave_callback;
-    state->slave_rx_callback = &default_rx_callback;
-    state->slave_tx_callback = &default_tx_callback;
-    state->slave_end_callback = &default_slave_callback;
+    state->slave_begin_handler = 0;
+    state->slave_rx_handler = 0;
+    state->slave_tx_handler = 0;
+    state->slave_end_handler = 0;
     
     // Re-enable port after configuration
     port->CR1 |= I2C_CR1_PE; 
@@ -294,13 +292,17 @@ void i2c_master_write(uint8 i2c_num, uint32 addr, uint8 *data, uint32 len) {
     i2c_state *state;
     uint32 startmillis = millis();
 
+    if(!len) {
+        return;
+    }
+
     switch (i2c_num) {
     case I2C_PORT1:
         port = (i2c_port*)I2C1_BASE;
         state = &i2c1_state;
         break;
     case I2C_PORT2:
-        ASSERT(0); // shouldn't ever get here TODO
+        // TODO: copy above
     default:
         ASSERT(0); // shouldn't ever get here
     }
@@ -328,12 +330,10 @@ void i2c_master_write(uint8 i2c_num, uint32 addr, uint8 *data, uint32 len) {
     state->data = data;
 
     // ok, kick things off
-    if(len > 0) {
-        port->CR2 |= (I2C_CR2_ITBUFEN | I2C_CR2_ITEVTEN | I2C_CR2_ITBUFEN);
-        port->CR1 |= I2C_CR1_ACK;
-        port->CR1 &= (~ I2C_CR1_STOP);
-        port->CR1 |= I2C_CR1_START; 
-    }
+    port->CR2 |= (I2C_CR2_ITBUFEN | I2C_CR2_ITEVTEN | I2C_CR2_ITBUFEN);
+    port->CR1 |= I2C_CR1_ACK;
+    port->CR1 &= (~ I2C_CR1_STOP);
+    port->CR1 |= I2C_CR1_START; 
 }
 
 
@@ -342,6 +342,10 @@ void i2c_master_read(uint8 i2c_num, uint32 addr, uint8 *data, uint32 len) {
     i2c_port *port;
     i2c_state *state;
     uint32 startmillis = millis();
+
+    if(!len) {
+        return;
+    }
 
     switch (i2c_num) {
     case I2C_PORT1:
@@ -381,12 +385,10 @@ void i2c_master_read(uint8 i2c_num, uint32 addr, uint8 *data, uint32 len) {
         port->CR1 |= I2C_CR1_POS;       // ugh
     }
     // ok, kick things off
-    if(len > 0) {
-        port->CR2 |= (I2C_CR2_ITBUFEN | I2C_CR2_ITEVTEN | I2C_CR2_ITBUFEN);
-        port->CR1 |= I2C_CR1_ACK;
-        port->CR1 &= (~ I2C_CR1_STOP);
-        port->CR1 |= I2C_CR1_START; 
-    }
+    port->CR2 |= (I2C_CR2_ITBUFEN | I2C_CR2_ITEVTEN | I2C_CR2_ITBUFEN);
+    port->CR1 |= I2C_CR1_ACK;
+    port->CR1 &= (~ I2C_CR1_STOP);
+    port->CR1 |= I2C_CR1_START; 
 }
 
 /* -----------------------------------------------------------------------*/
@@ -403,6 +405,7 @@ void i2c_slave_set_addr(uint32 i2c_num, uint32 addr) {
         break;
     case I2C_PORT2:
         port = (i2c_port*)I2C2_BASE;
+        state = &i2c2_state;
         break;
     default:
         ASSERT(0); // shouldn't ever get here
@@ -425,7 +428,7 @@ uint32 i2c_getlen(uint8 i2c_num) {
         state = &i2c1_state;
         break;
     case I2C_PORT2:
-        ASSERT(0); // shouldn't ever get here TODO
+        // TODO: copy above
     default:
         ASSERT(0); // shouldn't ever get here
     }
@@ -450,7 +453,7 @@ uint8 i2c_isbusy(uint8 i2c_num) {
         state = &i2c1_state;
         break;
     case I2C_PORT2:
-        ASSERT(0); // shouldn't ever get here TODO
+        // TODO: copy above
     default:
         ASSERT(0); // shouldn't ever get here
     }
@@ -472,7 +475,7 @@ uint8 i2c_isbusy(uint8 i2c_num) {
 }    
 
 /* -----------------------------------------------------------------------*/
-void i2c_slave_set_begin_callback(uint32 i2c_num, void (*thecallback)(void)) {
+void i2c_slave_set_begin_handler(uint32 i2c_num, voidFuncPtr handler) {
     i2c_state *state;
 
     switch (i2c_num) {
@@ -485,26 +488,26 @@ void i2c_slave_set_begin_callback(uint32 i2c_num, void (*thecallback)(void)) {
     default:
         ASSERT(0); // shouldn't ever get here
     }
-    state->slave_begin_callback = thecallback;
+    state->slave_begin_handler = handler;
     return;
 }
 
 /* -----------------------------------------------------------------------*/
-void i2c_slave_set_rx_callback(uint32 i2c_num, void (*function)(uint8*)) {
+void i2c_slave_set_rx_handler(uint32 i2c_num, void (*handler)(uint8*)) {
     //TODO
     ASSERT(IS_VALID_I2C_NUM(i2c_num));
     return;
 }
 
 /* -----------------------------------------------------------------------*/
-void i2c_slave_set_tx_callback(uint32 i2c_num, uint8 (*function)(void)) {
+void i2c_slave_set_tx_handler(uint32 i2c_num, uint8 (*handler)(void)) {
     // TODO
     ASSERT(IS_VALID_I2C_NUM(i2c_num));
     return;
 }
 
 /* -----------------------------------------------------------------------*/
-void i2c_slave_set_end_callback(uint32 i2c_num, void (*function)(void)) {
+void i2c_slave_set_end_handler(uint32 i2c_num, voidFuncPtr handler) {
     //TODO
     ASSERT(IS_VALID_I2C_NUM(i2c_num));
     return;
@@ -613,15 +616,5 @@ void I2C2_EV_IRQHandler(void) {
 void I2C2_ER_IRQHandler(void) {
     ASSERT(0);  // for testing/debugging
     return;
-}
-
-void default_slave_callback(void) {
-    return;
-}
-void default_rx_callback(uint8 data) {
-    return;
-}
-uint8 default_tx_callback(void) {
-    return 0;
 }
 
