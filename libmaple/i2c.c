@@ -32,15 +32,15 @@
  */
 
 /*****************
- * NOTES: 
- * 
+ * NOTES:
+ *
  * really quick testing shows that the periph can't make it all the way to a 1MHz
  * clock rate with the current settings; at some point the periph can't seem to
- * shift out even the addr and gives up. this may have to do with the horrible 
+ * shift out even the addr and gives up. this may have to do with the horrible
  * electrical testing rig I have set up.
  *
  * The output frequency is not very well aligned with the requested above 100khz;
- * I guess my timer math is wrong though I suspect it's some form of clock 
+ * I guess my timer math is wrong though I suspect it's some form of clock
  * stretching.
  *
  *****************/
@@ -71,11 +71,14 @@ typedef struct i2c_state {
 static i2c_state i2c1_state;
 static i2c_state i2c2_state;
 
+uint32 frequency;
+
 /* -----------------------------------------------------------------------*/
 void i2c_init(uint32 i2c_num, uint32 freq) {
     i2c_port *port;
     i2c_state *state;
     //freq = 100000;  // TODO: this
+    frequency = freq;
     
     switch (i2c_num) {
         case I2C_PORT1:
@@ -85,7 +88,7 @@ void i2c_init(uint32 i2c_num, uint32 freq) {
             port->CR1 &= ~I2C_CR1_SWRST; // re-enable
             port->CR1 &= (~ I2C_CR1_PE); // disable the hardware to configure
 
-            // Configure I2C pins: SCL and SDA 
+            // Configure I2C pins: SCL and SDA
             // On the maple, I2C1 SCL is header pin D5 and I2C1 SDA is D9
             gpio_set_mode(GPIOB_BASE, 6, GPIO_MODE_AF_OUTPUT_OD);
             gpio_set_mode(GPIOB_BASE, 7, GPIO_MODE_AF_OUTPUT_OD);
@@ -99,7 +102,7 @@ void i2c_init(uint32 i2c_num, uint32 freq) {
             nvic_enable_interrupt(NVIC_INT_I2C1_EV);
             nvic_enable_interrupt(NVIC_INT_I2C1_ER);
             break;
-        case I2C_PORT2: 
+        case I2C_PORT2:
             // TODO: copy above
         default:   // should never get here
             ASSERT(0);
@@ -123,7 +126,7 @@ void i2c_init(uint32 i2c_num, uint32 freq) {
         // TODO: don't get why this isn't actually 3*freq...
         port->CCR = 36000000/(2*freq);
     }
-    
+
     // configure rise time register
     // this is equal the number of cycles to meet a given rise time
     // TRISE = (periph_clk * rise_time) + 1
@@ -136,7 +139,7 @@ void i2c_init(uint32 i2c_num, uint32 freq) {
         port->TRISE = (36000000 * (1/8200000)) + 1; // <120ns for Fast-mode+
     }
     // configure I2C_CR1, I2C_CR2
-    port->CR1 &= (~ (I2C_CR1_PEC | I2C_CR1_SMBUS | I2C_CR1_SMBTYPE | I2C_CR1_NOSTRETCH | I2C_CR1_POS)); 
+    port->CR1 &= (~ (I2C_CR1_PEC | I2C_CR1_SMBUS | I2C_CR1_SMBTYPE | I2C_CR1_NOSTRETCH | I2C_CR1_POS));
     // enable all interrupts on the peripheral side
     port->CR2 |= (I2C_CR2_ITBUFEN | I2C_CR2_ITEVTEN | I2C_CR2_ITBUFEN);
 
@@ -154,9 +157,9 @@ void i2c_init(uint32 i2c_num, uint32 freq) {
     state->slave_rx_handler = 0;
     state->slave_tx_handler = 0;
     state->slave_end_handler = 0;
-    
+
     // Re-enable port after configuration
-    port->CR1 |= I2C_CR1_PE; 
+    port->CR1 |= I2C_CR1_PE;
 }
 
 /* -----------------------------------------------------------------------*/
@@ -165,10 +168,10 @@ void i2c_send1(uint32 addr, uint32 data) {
     i2c_port *port;
     port = (i2c_port*)I2C1_BASE;
     uint32 startmillis = millis();
-    
-    port->CR1 |= I2C_CR1_START; 
 
-    while (! (port->SR1 & I2C_SR1_SB)) { 
+    port->CR1 |= I2C_CR1_START;
+
+    while (! (port->SR1 & I2C_SR1_SB)) {
         asm volatile("nop");
         if(millis() - startmillis > I2C_TIMEOUT) {
             port->CR1 |= I2C_CR1_SWRST;     // timed out, freak out
@@ -178,6 +181,7 @@ void i2c_send1(uint32 addr, uint32 data) {
     }
     port->DR = (addr & 0x7F) << 1;
     //port->DR = 0x8; // ADDR of slave device: "4" plus LSB is low for transmit
+
     while (! ((port->SR1 & I2C_SR1_ADDR) && (port->SR2 & I2C_SR2_TRA))) { // addr accepted? transmitting?
         asm volatile("nop");
         if(millis() - startmillis > I2C_TIMEOUT) {
@@ -186,11 +190,13 @@ void i2c_send1(uint32 addr, uint32 data) {
             return;
         }
     }
+
+
     port->DR = (data & 0xFF); // set data
     port->SR1 &= ~ I2C_SR1_ADDR; // clear addr
     port->CR1 |= I2C_CR1_STOP; // only sending the one byte; this could be inserted above the DR write?
 
-    while (port->SR1 & I2C_SR1_STOPF) { 
+    while (port->SR1 & I2C_SR1_STOPF) {
         asm volatile("nop");
         if(millis() - startmillis > I2C_TIMEOUT) {
             port->CR1 |= I2C_CR1_SWRST;     // timed out, freak out
@@ -215,22 +221,22 @@ uint8 i2c_read1(uint32 addr) {
     port->CR1 &= (~ I2C_CR1_ACK);
 
     // start
-    port->CR1 |= I2C_CR1_START; 
+    port->CR1 |= I2C_CR1_START;
 
     port->DR = 0x9; // ADDR of slave device: "4" plus LSB is low for transmit
-    while (! (port->SR1 & I2C_SR1_SB)) { 
+    while (! (port->SR1 & I2C_SR1_SB)) {
         asm volatile("nop");
         if(millis() - startmillis > I2C_TIMEOUT) {
             port->CR1 |= I2C_CR1_SWRST;     // timed out, freak out
             port->CR1 &= (~I2C_CR1_SWRST);
-            return 0; 
+            return 0;
         }
     }
     port->DR = ((addr & 0x7F) << 1) | 0x1;
     //port->DR = 0x9; // ADDR of slave device: "4" plus LSB is low for transmit
-    
+
     // addr accepted? transmitting?
-    while (! ((port->SR1 & I2C_SR1_ADDR) && (! (port->SR2 & I2C_SR2_TRA)))) { 
+    while (! ((port->SR1 & I2C_SR1_ADDR) && (! (port->SR2 & I2C_SR2_TRA)))) {
         asm volatile("nop");
         if(millis() - startmillis > I2C_TIMEOUT) {
             port->CR1 |= I2C_CR1_SWRST;     // timed out, freak out
@@ -243,7 +249,7 @@ uint8 i2c_read1(uint32 addr) {
     port->CR1 &= (~ I2C_CR1_ACK);
 
     // stuff to read?
-    while (! (port->SR1 & I2C_SR1_RXNE)) { 
+    while (! (port->SR1 & I2C_SR1_RXNE)) {
         asm volatile("nop");
         if(millis() - startmillis > I2C_TIMEOUT) {
             port->CR1 |= I2C_CR1_SWRST;     // timed out, freak out
@@ -309,13 +315,13 @@ void i2c_master_write(uint8 i2c_num, uint32 addr, uint8 *data, uint32 len) {
 
     // need to make sure any previous activity is wrapped up
     if((state->busy) || (port->SR2 & I2C_SR2_BUSY)) {
-        while(port->SR2 & I2C_SR2_BUSY) { 
+        while(port->SR2 & I2C_SR2_BUSY) {
             delayMicroseconds(1);
             if((millis() - startmillis) > I2C_TIMEOUT) {
                 // we timed out; probably some device is pulling SCL down
                 // indefinately
                 i2c_disable(i2c_num);
-                return; 
+                return;
             }
         }
         // this will increase the START high hold time, required for
@@ -324,7 +330,7 @@ void i2c_master_write(uint8 i2c_num, uint32 addr, uint8 *data, uint32 len) {
     }
 
     state->busy = 1;
-    state->slave_addr = (addr & 0x8F) << 1;  // 7bit plus LSB low for write
+    state->slave_addr = (addr);  // 7bit plus LSB low for write (addr & 0x8F) << 1
     state->len = len;
     state->index = 0;
     state->data = data;
@@ -333,7 +339,7 @@ void i2c_master_write(uint8 i2c_num, uint32 addr, uint8 *data, uint32 len) {
     port->CR2 |= (I2C_CR2_ITBUFEN | I2C_CR2_ITEVTEN | I2C_CR2_ITBUFEN);
     port->CR1 |= I2C_CR1_ACK;
     port->CR1 &= (~ I2C_CR1_STOP);
-    port->CR1 |= I2C_CR1_START; 
+    port->CR1 |= I2C_CR1_START;
 }
 
 
@@ -361,13 +367,13 @@ void i2c_master_read(uint8 i2c_num, uint32 addr, uint8 *data, uint32 len) {
 
     // need to make sure any previous activity is wrapped up
     if((state->busy) || (port->SR2 & I2C_SR2_BUSY)) {
-        while(port->SR2 & I2C_SR2_BUSY) { 
+        while(port->SR2 & I2C_SR2_BUSY) {
             delayMicroseconds(1);
             if((millis() - startmillis) > I2C_TIMEOUT) {
                 // we timed out; probably some device is pulling SCL down
                 // indefinately
                 i2c_disable(i2c_num);
-                return; 
+                return;
             }
         }
         // this will increase the START high hold time, required for
@@ -377,7 +383,7 @@ void i2c_master_read(uint8 i2c_num, uint32 addr, uint8 *data, uint32 len) {
 
     // if we just wrapped up a transmission we gotta wait for it to complete
     state->busy = 1;
-    state->slave_addr = (addr & 0x8F) << 1 | 0x01;  // 7bit plus LSB high for read
+    state->slave_addr = (addr) | 0x01;  // 7bit plus LSB high for read (addr & 0x8F) << 1 | 0x01  HH Why?
     state->len = len;
     state->index = 0;
     state->data = data;
@@ -388,7 +394,7 @@ void i2c_master_read(uint8 i2c_num, uint32 addr, uint8 *data, uint32 len) {
     port->CR2 |= (I2C_CR2_ITBUFEN | I2C_CR2_ITEVTEN | I2C_CR2_ITBUFEN);
     port->CR1 |= I2C_CR1_ACK;
     port->CR1 &= (~ I2C_CR1_STOP);
-    port->CR1 |= I2C_CR1_START; 
+    port->CR1 |= I2C_CR1_START;
 }
 
 /* -----------------------------------------------------------------------*/
@@ -435,12 +441,12 @@ uint32 i2c_getlen(uint8 i2c_num) {
 
     return state->len;
 //    DEBUG
-/*  
+/*
     i2c_port *port;
     port = (i2c_port*)I2C1_BASE;
     return (uint32)(port->DR);
 */
-}    
+}
 
 /* -----------------------------------------------------------------------*/
 uint8 i2c_isbusy(uint8 i2c_num) {
@@ -472,7 +478,7 @@ uint8 i2c_isbusy(uint8 i2c_num) {
     //return state->busy;
     // state->busy is redundant at this point...
     return (1 && ((state->busy) || (port->SR2 & I2C_SR2_BUSY)));
-}    
+}
 
 /* -----------------------------------------------------------------------*/
 void i2c_slave_set_begin_handler(uint32 i2c_num, voidFuncPtr handler) {
@@ -516,7 +522,7 @@ void i2c_slave_set_end_handler(uint32 i2c_num, voidFuncPtr handler) {
 /* -----------------------------------------------------------------------*/
 void I2C1_EV_IRQHandler(void) {
     i2c_port *port = (i2c_port*)I2C1_BASE;
-    
+
     uint16 SR1 = port->SR1;
     uint16 SR2 = port->SR2;
 
@@ -595,26 +601,27 @@ void I2C1_EV_IRQHandler(void) {
         }
     } else { // we're SLAVE
         ASSERT(0);
-    } 
+    }
     return;
 }
 
 /* -----------------------------------------------------------------------*/
 void I2C1_ER_IRQHandler(void) {
     //i2c_disable(I2C_PORT1);     // TODO: something more reasonable
-    ASSERT(0);  // for testing/debugging
+    //ASSERT(0);  // for testing/debugging
+    i2c_init(I2C_PORT1, frequency);
     return;
 }
 
 /* -----------------------------------------------------------------------*/
 void I2C2_EV_IRQHandler(void) {
-    ASSERT(0);  // for testing/debugging
+    //ASSERT(0);  // for testing/debugging
     return;
 }
 
 /* -----------------------------------------------------------------------*/
 void I2C2_ER_IRQHandler(void) {
-    ASSERT(0);  // for testing/debugging
+    //ASSERT(0);  // for testing/debugging
     return;
 }
 
